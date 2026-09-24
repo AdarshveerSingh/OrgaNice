@@ -1,0 +1,72 @@
+# ================================
+# OrgaNice - C Project
+# ================================
+
+# Compiled executables
+*.exe
+*.out
+*.app
+
+# Object files
+*.o
+*.obj
+
+# Static / dynamic libraries
+*.a
+*.lib
+*.dll
+*.so
+
+# Debug / profiling files
+*.dSYM/
+*.pdb
+*.ilk
+
+# Build directories
+build/
+bin/
+dist/
+
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+Debug/
+Release/
+x64/
+x86/
+
+# VS Code
+.vscode/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Generated runtime data
+data/runtime/
+data/cache/
+data/index/
+
+# Test output / temporary test files
+tests/output/
+tests/tmp/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
