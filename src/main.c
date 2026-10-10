@@ -1,44 +1,61 @@
 /*
- * main.c - step 2: demo of the platform layer and the utility helpers.
- * Lists the files of one folder with size and modified date.
+ * main.c - step 3: demo of the scanner and the hash functions.
+ * Scans a folder (with subfolders), shows the biggest files and fingerprints the largest one.
  */
+#include "hash.h"
 #include "platform.h"
+#include "scanner.h"
 #include "utils.h"
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-typedef struct {
-    size_t files;
-    unsigned long long bytes;
-} Totals;
-
-static int show_file(const char *path, const PlatStat *st, void *ctx)
+static int by_size_desc(const void *a, const void *b)
 {
-    Totals *t = ctx;
-    char size[32], date[16];
-
-    human_size(st->size, size, sizeof size);
-    format_date(st->mtime, date, sizeof date);
-    printf("  %-44s %10s  %s\n", path_basename(path), size, date);
-    t->files++;
-    t->bytes += st->size;
-    return 0;
+    const FileEntry *x = a, *y = b;
+    return (x->size < y->size) - (x->size > y->size);
 }
 
 int main(void)
 {
-    char folder[OPATH], def[OPATH], total[32];
-    Totals t = { 0, 0 };
+    char folder[OPATH], def[OPATH], sz[32];
+    FileList fl;
+    unsigned long long total = 0;
+    size_t i;
 
     plat_console_init();
-    ui_title("OrgaNice - step 2: platform layer and utilities");
+    ui_title("OrgaNice - step 3: scanner and hashing");
     default_downloads(def, sizeof def);
-    if (!prompt_folder("Folder to list", def, folder, sizeof folder))
+    if (!prompt_folder("Folder to scan (subfolders included)", def, folder, sizeof folder))
         return 0;
 
-    printf("\nFiles in %s:\n", folder);
-    plat_walk(folder, 0, show_file, &t);
-    human_size(t.bytes, total, sizeof total);
-    ui_ok("%zu files, %s in total.", t.files, total);
+    filelist_init(&fl);
+    filelist_scan(&fl, folder, 1, 0);
+    for (i = 0; i < fl.count; i++)
+        total += fl.items[i].size;
+    human_size(total, sz, sizeof sz);
+    ui_ok("Found %zu files, %s in total.", fl.count, sz);
+
+    if (fl.count > 0) {
+        const FileEntry *big;
+        uint32_t crc;
+        qsort(fl.items, fl.count, sizeof *fl.items, by_size_desc);
+
+        printf("\nLargest files:\n");
+        for (i = 0; i < fl.count && i < 5; i++) {
+            human_size(fl.items[i].size, sz, sizeof sz);
+            printf("  %10s  %s\n", sz, path_relative(fl.items[i].path, folder));
+        }
+
+        big = &fl.items[0];
+        if (big->size <= (512ULL << 20) && crc32_file(big->path, &crc) == 0)
+            printf("\nCRC-32 of %s: %08X\n", big->name, (unsigned)crc);
+        else
+            printf("\n(The largest file is bigger than 512 MB: CRC-32 skipped.)\n");
+        printf("FNV-1a of its name: %016llX\n",
+               (unsigned long long)fnv1a64(big->name, strlen(big->name), FNV_OFFSET));
+    }
+    filelist_free(&fl);
     return 0;
 }
