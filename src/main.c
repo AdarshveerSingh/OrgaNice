@@ -1,7 +1,8 @@
 /*
- * main.c - step 8: leftover installers and ZIPs
+ * main.c - step 9: archiving of old files
  * A small menu that exposes only the modules written so far.
  */
+#include "archive.h"
 #include "duplicates.h"
 #include "leftovers.h"
 #include "organize.h"
@@ -72,6 +73,8 @@ static void do_zip_make(void)
 static void do_leftovers(void)     { leftovers_run(NULL, 0); }
 static void do_leftovers_adv(void) { leftovers_run(NULL, 1); }
 
+static void do_archive(void) { archive_run(NULL, 1); }
+
 static void do_undo(void)
 {
     char root[OPATH];
@@ -96,6 +99,7 @@ static const Item ITEMS[] = {
     { "Create a small demo ZIP", do_zip_make },
     { "Leftover installers and ZIPs", do_leftovers },
     { "Leftovers with custom search folders", do_leftovers_adv },
+    { "Archive old files", do_archive },
     { "Undo the last operation in a folder", do_undo },
     { "Empty the OrgaNice trash of a folder", do_empty_trash },
 };
@@ -104,7 +108,7 @@ static const Item ITEMS[] = {
 int main(void)
 {
     plat_console_init();
-    ui_title("OrgaNice - step 8: leftover installers and ZIPs");
+    ui_title("OrgaNice - step 9: archiving of old files");
     for (;;) {
         int i, choice;
         for (i = 0; i < NITEMS; i++)
