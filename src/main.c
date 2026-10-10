@@ -1,8 +1,9 @@
 /*
- * main.c - step 7: organizer, duplicates and ZIP reader
+ * main.c - step 8: leftover installers and ZIPs
  * A small menu that exposes only the modules written so far.
  */
 #include "duplicates.h"
+#include "leftovers.h"
 #include "organize.h"
 #include "plan.h"
 #include "platform.h"
@@ -68,6 +69,9 @@ static void do_zip_make(void)
         ui_err("Could not write %s", path);
 }
 
+static void do_leftovers(void)     { leftovers_run(NULL, 0); }
+static void do_leftovers_adv(void) { leftovers_run(NULL, 1); }
+
 static void do_undo(void)
 {
     char root[OPATH];
@@ -90,6 +94,8 @@ static const Item ITEMS[] = {
     { "Duplicates across folders and drives (+ hard links)", do_dups_adv },
     { "Show what is inside a ZIP file", do_zip_list },
     { "Create a small demo ZIP", do_zip_make },
+    { "Leftover installers and ZIPs", do_leftovers },
+    { "Leftovers with custom search folders", do_leftovers_adv },
     { "Undo the last operation in a folder", do_undo },
     { "Empty the OrgaNice trash of a folder", do_empty_trash },
 };
@@ -98,7 +104,7 @@ static const Item ITEMS[] = {
 int main(void)
 {
     plat_console_init();
-    ui_title("OrgaNice - step 7: organizer, duplicates and ZIP reader");
+    ui_title("OrgaNice - step 8: leftover installers and ZIPs");
     for (;;) {
         int i, choice;
         for (i = 0; i < NITEMS; i++)
