@@ -1,5 +1,5 @@
 /*
- * main.c - step 9: archiving of old files
+ * main.c - step 10: sandbox demo folder
  * A small menu that exposes only the modules written so far.
  */
 #include "archive.h"
@@ -8,6 +8,7 @@
 #include "organize.h"
 #include "plan.h"
 #include "platform.h"
+#include "sandbox.h"
 #include "utils.h"
 #include "zipfile.h"
 #include <stdio.h>
@@ -75,6 +76,27 @@ static void do_leftovers_adv(void) { leftovers_run(NULL, 1); }
 
 static void do_archive(void) { archive_run(NULL, 1); }
 
+#define SANDBOX_NAME "organice_sandbox"
+
+static void do_sandbox_make(void)
+{
+    char root[OPATH];
+    if (sandbox_create(root, sizeof root) == 0)
+        ui_ok("Demo folder created: ./%s (try the other menu items on it)", root);
+    else
+        ui_err("Could not create the demo folder.");
+}
+
+static void do_sandbox_remove(void)
+{
+    if (plat_is_dir(SANDBOX_NAME)) {
+        sandbox_remove(SANDBOX_NAME);
+        ui_ok("Demo folder removed.");
+    } else {
+        ui_info("There is no demo folder to remove.");
+    }
+}
+
 static void do_undo(void)
 {
     char root[OPATH];
@@ -100,6 +122,8 @@ static const Item ITEMS[] = {
     { "Leftover installers and ZIPs", do_leftovers },
     { "Leftovers with custom search folders", do_leftovers_adv },
     { "Archive old files", do_archive },
+    { "Create the demo sandbox folder", do_sandbox_make },
+    { "Remove the demo sandbox folder", do_sandbox_remove },
     { "Undo the last operation in a folder", do_undo },
     { "Empty the OrgaNice trash of a folder", do_empty_trash },
 };
@@ -108,7 +132,7 @@ static const Item ITEMS[] = {
 int main(void)
 {
     plat_console_init();
-    ui_title("OrgaNice - step 9: archiving of old files");
+    ui_title("OrgaNice - step 10: sandbox demo folder");
     for (;;) {
         int i, choice;
         for (i = 0; i < NITEMS; i++)
