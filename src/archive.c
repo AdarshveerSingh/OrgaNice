@@ -1,8 +1,10 @@
 /*
  * archive.c - archives old, unused files.
  *
- * "Unused" = neither modified nor opened for N days (presets: 6 months,
- * 1 year, 2 years, custom). Files that are already compressed (photos,
+ * "Unused" = not modified for N days (presets: 6 months, 1 year, 2 years,
+ * custom). The last-accessed date is deliberately NOT used: Windows updates
+ * it unreliably, and virus scanners, indexers and OrgaNice's own scans can
+ * make untouched files look recently opened. Files that are already compressed (photos,
  * videos, zips, .docx...) are skipped by default because packing them
  * saves almost nothing.
  *
@@ -75,7 +77,7 @@ void archive_run(const char *preset_root, int advanced)
     char archive[OPATH], name[96], stamp[32], cmd[4 * OPATH], sz[32], sz2[32], d[16];
     const char *src_arg_suffix;
     FileList fl;
-    size_t *pick = NULL, npick = 0, skipped_compressed = 0, i;
+    size_t *pick = NULL, npick = 0, skipped_compressed = 0, too_recent = 0, i;
     unsigned long long total = 0;
     int days, include_compressed = 0;
     time_t cutoff, now = time(NULL);
@@ -96,7 +98,7 @@ void archive_run(const char *preset_root, int advanced)
         if (!prompt_folder("Folder to look in (subfolders included)", def, src, sizeof src))
             return;
     }
-    printf("\nArchive files not used for:\n  1) 6 months\n  2) 1 year\n  3) 2 years\n  4) custom number of days\n");
+    printf("\nArchive files not modified for:\n  1) 6 months\n  2) 1 year\n  3) 2 years\n  4) custom number of days\n");
     switch (prompt_int("Choice [2]: ", 1, 4, 2)) {
     case 1: days = 182; break;
     case 3: days = 730; break;
@@ -117,10 +119,13 @@ void archive_run(const char *preset_root, int advanced)
     pick = xmalloc((fl.count + 1) * sizeof *pick);
     for (i = 0; i < fl.count; i++) {
         const FileEntry *e = &fl.items[i];
-        time_t last_used = e->mtime > e->atime ? e->mtime : e->atime;
         char ext[32];
-        if (last_used >= cutoff || path_has_prefix(e->path, dest))
+        if (path_has_prefix(e->path, dest))
             continue;
+        if (e->mtime >= cutoff) {                  /* modified recently: still in use */
+            too_recent++;
+            continue;
+        }
         path_ext_lower(e->name, ext, sizeof ext);
         if (!include_compressed && str_in_wordlist(ext, ALREADY_COMPRESSED)) {
             skipped_compressed++;
@@ -132,19 +137,20 @@ void archive_run(const char *preset_root, int advanced)
     if (skipped_compressed)
         ui_info("%zu old files skipped: already compressed (photos, videos, zips...).", skipped_compressed);
     if (npick == 0) {
-        ui_ok("No compressible files unused for %d+ days.", days);
+        ui_ok("No compressible files unmodified for %d+ days (%zu files are newer, %zu are already compressed).",
+              days, too_recent, skipped_compressed);
         goto out;
     }
 
     s_list = &fl;
     qsort(pick, npick, sizeof *pick, cmp_size_desc);
     human_size(total, sz, sizeof sz);
-    printf("\n" C_BOLD "%zu files (%s) haven't been used in %d+ days." C_RESET " Largest:\n", npick, sz, days);
+    printf("\n" C_BOLD "%zu files (%s) haven't been modified in %d+ days." C_RESET " Largest:\n", npick, sz, days);
     for (i = 0; i < npick && i < 10; i++) {
         const FileEntry *e = &fl.items[pick[i]];
         human_size(e->size, sz2, sizeof sz2);
-        format_date(e->mtime > e->atime ? e->mtime : e->atime, d, sizeof d);
-        printf("  %10s  %s " C_DIM "(last used %s)" C_RESET "\n", sz2, path_relative(e->path, src), d);
+        format_date(e->mtime, d, sizeof d);
+        printf("  %10s  %s " C_DIM "(last modified %s)" C_RESET "\n", sz2, path_relative(e->path, src), d);
     }
     if (!prompt_yes_no("\nPack them into a compressed archive?", 1))
         goto out;
