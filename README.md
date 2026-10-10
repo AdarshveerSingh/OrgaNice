@@ -29,7 +29,7 @@ Most existing tools either only sort by extension, or delete things outright. **
 1. Organize folders by type, extension, name rules, size or date (`Week1`, `Week2`... / months / years), with filters and conflict handling.
 2. Detect duplicates by **content**, across folders and drives, and offer a non-destructive fix: **hard links** keep every path working while storing the data once.
 3. Clean up installers and ZIPs **intelligently**: verify that a ZIP's contents really exist on disk (CRC-32 check) and that an installer's program is installed.
-4. Archive files that have not been modified for a long time instead of deleting them.
+4. Archive long-unused files instead of deleting them.
 5. Be **safe by design**: Scan → Analyze → Propose → Review → Confirm → Execute, with a trash folder and undo log.
 6. Be approachable: Basic and Advanced modes, a "What do you want to do?" search, and a sandbox to try features on demo files.
 7. Pure C, no external libraries, portable between Windows and Linux.
@@ -60,7 +60,7 @@ Most existing tools either only sort by extension, or delete things outright. **
 | ZIP leftovers | Central directory parsed directly; every entry searched on disk by name + size and **verified with CRC-32** → SAFE (≥95%), PARTIAL (≥50%), KEEP |
 | Installer leftovers | File name → product key (`ChromeSetup.exe` → `chrome`), matched against Windows *Uninstall* registry entries; older versions of the same installer flagged as superseded |
 | Unfinished downloads | `.crdownload`, `.part`... untouched for a day or more |
-| Archiving | Files not modified for 6 months / 1 year / 2 years / custom; already-compressed formats skipped; archive verified before originals go to trash |
+| Archiving | Files unused for 6 months / 1 year / 2 years / custom; already-compressed formats skipped; archive verified before originals go to trash |
 
 **Feature 3: Duplicates across the system**
 
@@ -107,7 +107,7 @@ Several folders or whole drives scanned together. Before anything is removed, th
 | `duplicates.c/h` | Features 2 & 3: duplicate detection and actions |
 | `zipfile.c/h` | ZIP central-directory reader and a minimal stored-ZIP writer |
 | `leftovers.c/h` | Already-extracted ZIPs, installed / superseded installers, unfinished downloads |
-| `archive.c/h` | Archiving of files not modified for a long time |
+| `archive.c/h` | Archiving of unused files |
 | `sandbox.c/h` | Generates a demo folder full of realistic clutter |
 | `ui.c/h` | Menus, generated from one feature table |
 
@@ -212,37 +212,9 @@ Installers
 | Organizer: type / extension / name / size / date, filters, conflicts | Done |
 | Duplicates: content-based, keeper policy, hard links | Done |
 | ZIP reader + extraction check, installer check, unfinished downloads | Done |
-| Archiving of files not modified for a long time | Done |
+| Archiving of unused files | Done |
 | Basic / Advanced UI, feature search, sandbox | Done |
 | Storage analyzer (what is using my disk, drill-down) | Planned |
 | Fast whole-drive scan by reading the NTFS Master File Table | Planned |
 | File-name analyzer (`final_final_REAL.pdf` → rule-based suggestions) | Planned |
 | Unicode paths (wide-char Win32 API), ZIP64, multi-level undo history | Planned |
-
----
-
-## 4. Testing
-
-OrgaNice was tested on Windows 11 (MinGW-w64 gcc) and Linux, first on the built-in sandbox and then on real folders.
-
-| Area | What was checked | Result |
-|---|---|---|
-| Leftovers | Fully extracted ZIP, half-extracted ZIP and never-opened ZIP | SAFE / PARTIAL / KEEP as expected |
-| Leftovers | Older installer next to a newer one; stale `.crdownload` | Both flagged SAFE |
-| Duplicates | Same picture under three names; same video in two project folders | Found by content, not by name |
-| Hard links | `fsutil hardlink list` after linking | All paths listed, both files still open |
-| Hard links | Re-running the search on linked files | Reported as "already hard links", ignored |
-| Undo | Quick tidy followed by Undo | All files back in place, empty folders removed |
-| Archive | Files older than one year | Verified archive created, originals moved to trash |
-
-**Measured disk saving** (a 2 GB file, copied and then hard-linked with OrgaNice; free space read with `Get-Volume`):
-
-| Step | Free space (MB) | Change |
-|---|---|---|
-| After creating `a.bin` | 55009 | |
-| After copying it to `b.bin` | 52955 | -2054 |
-| After linking and emptying the OrgaNice trash | 54939 | +1984 |
-
-Free space only increases after the OrgaNice trash is emptied, because the old copy is kept there until then so that Undo works.
-
-**Issue found during testing:** the archive feature originally treated a file as "recently used" if its last-accessed date was recent. Other features read the files, which can refresh that date on Windows, so nothing looked old enough to archive. Archiving now uses the last-modified date only.
